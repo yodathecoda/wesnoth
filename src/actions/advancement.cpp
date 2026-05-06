@@ -40,6 +40,7 @@
 #include "units/helper.hpp" //number_of_possible_advances
 #include "video.hpp"
 #include "whiteboard/manager.hpp"
+#include "utils/scope_exit.hpp"
 
 static lg::log_domain log_engine("engine");
 #define DBG_NG LOG_STREAM(debug, log_engine)
@@ -268,6 +269,8 @@ advances the unit and stores data in the replay (or reads data from replay).
 */
 void advance_unit_at(const advance_unit_params& params)
 {
+	static std::set<std::size_t> units_with_pre_advance_event_in_progress;
+
 	//i just don't want infinite loops...
 	// the 20 is picked rather randomly.
 	for(int advacment_number = 0; advacment_number < 20; advacment_number++)
@@ -278,10 +281,24 @@ void advance_unit_at(const advance_unit_params& params)
 			return;
 		}
 
+		//don't advance this unit if we're already handling a pre_advance event for it
+		auto underlying_id = u->underlying_id();
+		if(units_with_pre_advance_event_in_progress.count(underlying_id) > 0) {
+			return;
+		}
+
 		if(params.fire_events_)
 		{
-			LOG_NG << "Firing pre advance event at " << params.loc_ <<".";
-			resources::game_events->pump().fire("pre_advance", params.loc_);
+			//naked scope to contain the pre_advance event, keeping our event
+			//tracker as tight as possible
+			{
+				ON_SCOPE_EXIT(underlying_id) {
+					units_with_pre_advance_event_in_progress.erase(underlying_id);
+				};
+				LOG_NG << "Firing pre advance event at " << params.loc_ << ".";
+				units_with_pre_advance_event_in_progress.insert(underlying_id);
+				resources::game_events->pump().fire("pre_advance", params.loc_);
+			}
 			//TODO: maybe use id instead of location here ?.
 			u = resources::gameboard->units().find(params.loc_);
 			if(!unit_helper::will_certainly_advance(u))
