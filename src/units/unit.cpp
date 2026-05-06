@@ -1257,7 +1257,7 @@ color_t unit::xp_color() const
 {
 	bool major_amla = false;
 	bool has_amla = false;
-	for(const config& adv:get_modification_advances()){
+	for(const config& adv:get_cached_modification_advances()){
 		major_amla |= adv["major_amla"].to_bool();
 		has_amla = true;
 	}
@@ -1942,7 +1942,18 @@ std::vector<config> unit::get_modification_advances() const
 		}
 	}
 
+	cached_modification_advancements_ = res;
+
 	return res;
+}
+
+const std::vector<config>& unit::get_cached_modification_advances() const
+{
+	if(!cached_modification_advancements_.has_value()) {
+		get_modification_advances(); // just calling this updates the cache
+	}
+
+	return cached_modification_advancements_.value();
 }
 
 void unit::set_advancements(std::vector<config> advancements)

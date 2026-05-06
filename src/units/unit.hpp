@@ -177,7 +177,7 @@ public:
 	 */
 	bool can_advance() const
 	{
-		return !advances_to_.empty() || !get_modification_advances().empty();
+		return !advances_to_.empty() || !get_cached_modification_advances().empty();
 	}
 
 	/**
@@ -216,6 +216,7 @@ public:
 	 * @returns                  A config list of options data. Each option is unique.
 	 */
 	std::vector<config> get_modification_advances() const;
+	const std::vector<config>& get_cached_modification_advances() const;
 
 	/**
 	 * Gets the image and description data for modification advancements.
@@ -1950,6 +1951,8 @@ private:
 	ability_vector abilities_;
 
 	std::vector<config> advancements_;
+
+	mutable std::optional<std::vector<config>> cached_modification_advancements_;
 
 	t_string description_;
 	std::vector<t_string> special_notes_;

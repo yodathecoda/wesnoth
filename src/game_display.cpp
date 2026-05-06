@@ -21,6 +21,7 @@
 #include "game_display.hpp"
 
 #include <utility>
+#include <chrono>
 
 
 #include "cursor.hpp"
@@ -43,6 +44,8 @@
 #include "whiteboard/manager.hpp"
 #include "overlay.hpp"
 #include "draw.hpp"
+
+using namespace std::chrono_literals;
 
 static lg::log_domain log_display("display");
 #define ERR_DP LOG_STREAM(err, log_display)
@@ -428,9 +431,16 @@ void game_display::layout()
 		return;
 	}
 
-	refresh_report("report_clock");
-	refresh_report("report_battery");
-	refresh_report("report_countdown");
+	static std::chrono::time_point<std::chrono::system_clock> last_refreshed_reports;
+
+	if ((last_refreshed_reports - std::chrono::system_clock::now()) > 1000ms)
+	{
+		refresh_report("report_clock");
+		refresh_report("report_battery");
+		refresh_report("report_countdown");
+
+		last_refreshed_reports = std::chrono::system_clock::now();
+	}
 
 	if (invalidateGameStatus_)
 	{
