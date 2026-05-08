@@ -311,6 +311,7 @@ unit::unit(const unit& o)
 	, modifications_(o.modifications_)
 	, abilities_(o.abilities_)
 	, advancements_(o.advancements_)
+	, caching_modification_advances_accessor_(std::bind(&unit::get_modification_advances, this), 1000ms)
 	, description_(o.description_)
 	, special_notes_(o.special_notes_)
 	, usage_(o.usage_)
@@ -399,6 +400,7 @@ unit::unit(unit_ctor_t)
 	, modifications_()
 	, abilities_()
 	, advancements_()
+	, caching_modification_advances_accessor_(std::bind(&unit::get_modification_advances, this), 1000ms)
 	, description_()
 	, special_notes_()
 	, usage_()
@@ -1253,13 +1255,20 @@ color_t unit::xp_color(int xp_to_advance, bool can_advance, bool has_amla)
 	return {0, 160, 225};
 }
 
-color_t unit::xp_color() const
+color_t unit::xp_color(bool accept_cached) const
 {
 	bool major_amla = false;
 	bool has_amla = false;
-	for(const config& adv:get_modification_advances()){
-		major_amla |= adv["major_amla"].to_bool();
-		has_amla = true;
+	if(accept_cached) {
+		for(const config& adv:get_cached_modification_advances()) {
+			major_amla |= adv["major_amla"].to_bool();
+			has_amla = true;
+		}
+	} else {
+		for(const config& adv:get_modification_advances()) {
+			major_amla |= adv["major_amla"].to_bool();
+			has_amla = true;
+		}
 	}
 	//TODO: calculating has_amla and major_amla can be a quite slow operation, we should cache these two values somehow.
 	return xp_color(experience_to_advance(), !advances_to().empty() || major_amla, has_amla);
@@ -1943,6 +1952,11 @@ std::vector<config> unit::get_modification_advances() const
 	}
 
 	return res;
+}
+
+const std::vector<config>& unit::get_cached_modification_advances() const
+{
+	return caching_modification_advances_accessor_.value();
 }
 
 void unit::set_advancements(std::vector<config> advancements)

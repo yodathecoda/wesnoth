@@ -378,11 +378,11 @@ void unit_drawer::redraw_unit(const unit& u) const
 			);
 		}
 
-		if(u.experience() > 0 && u.can_advance()) {
+		if(u.experience() > 0 && u.can_advance(true)) {
 			bars.AGGREGATE_EMPLACE(
 				energy_bar::get_height(u.max_experience(), u.xp_bar_scaling() / std::max(u.level(), 1)),
 				energy_bar::get_filled(u.experience(), u.max_experience()),
-				energy_bar::get_color(u.xp_color(), bar_focus)
+				energy_bar::get_color(u.xp_color(true), bar_focus)
 			);
 		}
 

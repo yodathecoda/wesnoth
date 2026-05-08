@@ -25,7 +25,9 @@
 #include "utils/variant.hpp"
 
 #include <bitset>
+#include <chrono>
 #include "utils/optional_fwd.hpp"
+#include "utils/caching_accessor.hpp"
 
 class team;
 class unit_animation_component;
@@ -175,9 +177,13 @@ public:
 	 * Note this does not consider unit experience at all, it only checks option availability.
 	 * See @ref advances if an experience check is necessary.
 	 */
-	bool can_advance() const
+	bool can_advance(bool accept_cached = false) const
 	{
-		return !advances_to_.empty() || !get_modification_advances().empty();
+		if(accept_cached) {
+			return !advances_to_.empty() || !get_cached_modification_advances().empty();
+		} else {
+			return !advances_to_.empty() || !get_modification_advances().empty();
+		}
 	}
 
 	/**
@@ -216,6 +222,8 @@ public:
 	 * @returns                  A config list of options data. Each option is unique.
 	 */
 	std::vector<config> get_modification_advances() const;
+
+	const std::vector<config>& get_cached_modification_advances() const;
 
 	/**
 	 * Gets the image and description data for modification advancements.
@@ -1628,7 +1636,7 @@ public:
 	/**
 	 * Color for this unit's XP. See also @ref hp_color
 	 */
-	color_t xp_color() const;
+	color_t xp_color(bool accept_cached = false) const;
 	static color_t xp_color(int xp_to_advance, bool can_advance, bool has_amla);
 
 	/**
@@ -1950,6 +1958,8 @@ private:
 	ability_vector abilities_;
 
 	std::vector<config> advancements_;
+
+	utils::caching_accessor<std::vector<config>> caching_modification_advances_accessor_;
 
 	t_string description_;
 	std::vector<t_string> special_notes_;
